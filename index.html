@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Christmas Draw</title>
+  </head>
+  <body>
+    <script>
+      const sheas = [
+        {
+          name: "John Shea",
+          familyGroup: "GA",
+        },
+        {
+          name: "Monica Shook",
+          familyGroup: "WI",
+        },
+        {
+          name: "Michael Shea",
+        },
+        {
+          name: "Paul Shea",
+        },
+        {
+          name: "Angela Harris",
+          familyGroup: "OH",
+        },
+        {
+          name: "Jacqueline Shea",
+        },
+        {
+          name: "Mary Shea",
+          familyGroup: "GA",
+        },
+        {
+          name: "John Shook",
+          familyGroup: "WI",
+        },
+        {
+          name: "Ethan Harris",
+          familyGroup: "OH",
+        },
+        {
+          name: "James Shea",
+          familyGroup: "GA",
+        },
+        {
+          name: "Robert Shea",
+          familyGroup: "GA",
+        },
+        {
+          name: "Jack Harris",
+          familyGroup: "OH",
+        },
+        {
+          name: "Trevelyan Shook",
+          familyGroup: "WI",
+        },
+        {
+          name: "Gregory Shea",
+          familyGroup: "GA",
+        },
+        {
+          name: "Finnegan Shook",
+          familyGroup: "WI",
+        },
+      ];
+
+      const schneiders = [
+        {
+          name: "Rose Schneider",
+          familyGroup: "IA",
+        },
+        {
+          name: "Sandra Tully",
+          familyGroup: "CA",
+        },
+        {
+          name: "Michael Schneider",
+          familyGroup: "OH",
+        },
+        {
+          name: "Mary Shea",
+          familyGroup: "GA",
+        },
+        {
+          name: "Elizabeth Kawa",
+          familyGroup: "NE",
+        },
+        {
+          name: "Diana Schneider",
+          familyGroup: "IA",
+        },
+        {
+          name: "John Tully",
+          familyGroup: "CA",
+        },
+        {
+          name: "Kori Schneider",
+          familyGroup: "OH",
+        },
+        {
+          name: "John Shea",
+          familyGroup: "GA",
+        },
+        {
+          name: "Kevin Kawa",
+          familyGroup: "NE",
+        },
+        {
+          name: "Aiden Schneider-Holzer",
+          familyGroup: "IA",
+        },
+        {
+          name: "Michaela Schneider",
+          familyGroup: "OH",
+        },
+        {
+          name: "Tiffany Schneider",
+          familyGroup: "OH",
+        },
+        {
+          name: "Sophie Schneider",
+          familyGroup: "OH",
+        },
+        {
+          name: "Brandon Schneider",
+          familyGroup: "OH",
+        },
+        {
+          name: "Matthew Schneider",
+          familyGroup: "OH",
+        },
+        {
+          name: "James Shea",
+          familyGroup: "GA",
+        },
+        {
+          name: "Finnian Schneider",
+          familyGroup: "IA",
+        },
+        {
+          name: "Francis Tully",
+          familyGroup: "CA",
+        },
+        {
+          name: "David Tully",
+          familyGroup: "CA",
+        },
+        {
+          name: "Robert Shea",
+          familyGroup: "GA",
+        },
+        {
+          name: "Gregory Shea",
+          familyGroup: "GA",
+        },
+      ];
+
+      let givers, recipients;
+      let selected = [];
+
+      // switch between sheas and schneiders
+      function selectFamily(familyName) {
+        givers = familyName === "sheas" ? [...sheas] : [...schneiders];
+        recipients = familyName === "sheas" ? [...sheas] : [...schneiders];
+      }
+
+      function recordSelection({ giver, recipient }) {
+        // record selection
+        selected.push({ giver, recipient });
+        // remove giver from remaining givers
+        givers.splice(
+          givers.findIndex((g) => g.name === giver.name),
+          1
+        );
+        // remove recipient from remaining recipients
+        recipients.splice(
+          recipients.findIndex((r) => r.name === recipient.name),
+          1
+        );
+      }
+
+      // returns a psuedo-random integer between 0 and the number that is passed. Pass a positive integer unless you want un-intended behavior.
+      function randomize(range) {
+        return Math.floor(Math.random() * range);
+      }
+
+      function matchFamily() {
+        const giver = givers[randomize(givers.length)];
+        // console.log(giver);
+        const eligibleRecipients = recipients
+          .map((r) => {
+            // cannot gift to yourself
+            if (r.name === giver.name) return null;
+            // cannot gift to someone in the same family unit
+            if (
+              r.familyGroup &&
+              giver.familyGroup &&
+              giver.familyGroup === r.familyGroup
+            )
+              return null;
+            return r;
+          })
+          .filter((x) => x);
+        // console.log(eligibleRecipients);
+        const i = randomize(eligibleRecipients.length);
+        // console.log(i);
+        const recipient = eligibleRecipients[i];
+        // console.log(recipient);
+        return { giver, recipient };
+      }
+
+      function getMatch() {
+        if (!givers.length) return null;
+        const selection = matchFamily();
+        console.log(selection);
+        recordSelection(selection);
+        console.log(selected);
+      }
+
+      function setup() {
+        selectFamily("sheas");
+        // TODO: add event listener to initiate a round of selection
+      }
+
+      setup();
+    </script>
+  </body>
+</html>
