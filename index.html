@@ -5,9 +5,74 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Christmas Draw</title>
+
+    <style>
+      /* div.go {
+        border-radius: 50%;
+        border: 4px solid black;
+        display: inline-block;
+        text-align: center;
+        margin: 0 auto;
+        height: 100px;
+        width: 100px;
+        background-image: url("https://www.nicepng.com/png/detail/51-519773_christmas-tree-comments-christmas-tree-svg-free.png");
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+        background-color: rgb(246, 246, 246);
+        cursor: pointer;
+      } */
+    </style>
   </head>
   <body>
-    <script>
+    <!-- <div class="go"></div> -->
+    <script type="module">
+      // Import the functions from the SDKs
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/9.1.2/firebase-app.js";
+      import {
+        getFirestore,
+        collection,
+        doc,
+        getDocs,
+        getDoc,
+        onSnapshot,
+      } from "https://www.gstatic.com/firebasejs/9.1.2/firebase-firestore.js";
+
+      // web app's Firebase configuration
+      const firebaseConfig = {
+        apiKey: "AIzaSyAeCFX7erQWHoU5docTN7JKJQ8d5Gz6I6s",
+        authDomain: "sketch-and-code-website.firebaseapp.com",
+        databaseURL: "https://sketch-and-code-website.firebaseio.com",
+        projectId: "sketch-and-code-website",
+        storageBucket: "sketch-and-code-website.appspot.com",
+        messagingSenderId: "867551653933",
+        appId: "1:867551653933:web:d99668e756059779a848a4",
+      };
+
+      // Initialize Firebase
+      const app = initializeApp(firebaseConfig);
+      const db = getFirestore();
+      let stateDoc;
+      async function getState() {
+        stateDoc = await doc(db, "christmas-draw", "state");
+        const subscription = onSnapshot(stateDoc, (doc) => {
+          const source = doc.metadata.hasPendingWrites ? "Local" : "Server";
+          updateLocalState(doc.data());
+        });
+      }
+
+      function updateLocalState(newState) {
+        window.state = newState;
+        console.log(state);
+        // render();
+      }
+
+      async function updateServerState(newState) {
+        stateDoc.set(newState);
+      }
+
+      setTimeout(() => updateServerState({ test: false }), 3000);
+
       const sheas = [
         {
           name: "John Shea",
@@ -18,17 +83,8 @@
           familyGroup: "WI",
         },
         {
-          name: "Michael Shea",
-        },
-        {
-          name: "Paul Shea",
-        },
-        {
           name: "Angela Harris",
           familyGroup: "OH",
-        },
-        {
-          name: "Jacqueline Shea",
         },
         {
           name: "Mary Shea",
@@ -65,6 +121,15 @@
         {
           name: "Finnegan Shook",
           familyGroup: "WI",
+        },
+        {
+          name: "Michael Shea",
+        },
+        {
+          name: "Paul Shea",
+        },
+        {
+          name: "Jacqueline Shea",
         },
       ];
 
@@ -160,7 +225,7 @@
       ];
 
       let givers, recipients;
-      let selected = [];
+      const selected = [];
 
       // switch between sheas and schneiders
       function selectFamily(familyName) {
@@ -196,12 +261,10 @@
             // cannot gift to yourself
             if (r.name === giver.name) return null;
             // cannot gift to someone in the same family unit
-            if (
-              r.familyGroup &&
-              giver.familyGroup &&
-              giver.familyGroup === r.familyGroup
-            )
-              return null;
+            // also, givers who are not in a family group should not be matched
+            // with recipients who are not in a family group, because those are the least
+            // restricted givers and recievers - save them to match with more restricted givers
+            if (giver.familyGroup === r.familyGroup) return null;
             return r;
           })
           .filter((x) => x);
@@ -210,20 +273,33 @@
         // console.log(i);
         const recipient = eligibleRecipients[i];
         // console.log(recipient);
+
+        // this logic has a weird edge case where, if all the eligible recipients for a giver have already been randomly claimed before that giver is evaluated, a giver may not have any eligible recipients. I don't have an elegant solution for this issue, so in this case throw a warning and start over.
+        if (!giver || !recipient)
+          console.error(
+            "An error occurred - giver or recipient is falsy. Please start over."
+          );
         return { giver, recipient };
       }
 
       function getMatch() {
         if (!givers.length) return null;
         const selection = matchFamily();
-        console.log(selection);
+        // console.log(selection);
         recordSelection(selection);
         console.log(selected);
+        render();
       }
 
-      function setup() {
-        selectFamily("sheas");
-        // TODO: add event listener to initiate a round of selection
+      function render() {
+        // TODO: populate DOM elements showing the list of selections
+      }
+
+      async function setup() {
+        // selectFamily("sheas");
+        await getState();
+        // TODO: add event listener to call getMatch()
+        // TODO: add event listener to call selectFamily()
       }
 
       setup();
