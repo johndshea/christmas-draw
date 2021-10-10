@@ -7,7 +7,7 @@
     <title>Christmas Draw</title>
 
     <style>
-      /* div.go {
+      div#go {
         border-radius: 50%;
         border: 4px solid black;
         display: inline-block;
@@ -21,11 +21,12 @@
         background-position: center;
         background-color: rgb(246, 246, 246);
         cursor: pointer;
-      } */
+        display: none;
+      }
     </style>
   </head>
   <body>
-    <!-- <div class="go"></div> -->
+    <div id="go"></div>
     <script type="module">
       // Import the functions from the SDKs
       import { initializeApp } from "https://www.gstatic.com/firebasejs/9.1.2/firebase-app.js";
@@ -36,6 +37,7 @@
         getDocs,
         getDoc,
         onSnapshot,
+        setDoc,
       } from "https://www.gstatic.com/firebasejs/9.1.2/firebase-firestore.js";
 
       // web app's Firebase configuration
@@ -52,26 +54,134 @@
       // Initialize Firebase
       const app = initializeApp(firebaseConfig);
       const db = getFirestore();
+
       let stateDoc;
-      async function getState() {
-        stateDoc = await doc(db, "christmas-draw", "state");
-        const subscription = onSnapshot(stateDoc, (doc) => {
-          const source = doc.metadata.hasPendingWrites ? "Local" : "Server";
-          updateLocalState(doc.data());
+      let state;
+      let lastState;
+
+      function getState() {
+        return new Promise(async (resolve, reject) => {
+          stateDoc = await doc(db, "christmas-draw", "state");
+          const subscription = onSnapshot(stateDoc, (doc) => {
+            const source = doc.metadata.hasPendingWrites ? "Local" : "Server";
+            if (source === "Server" || !state) {
+              if (!state) var mustResolve = true;
+              updateLocalState(doc.data());
+              if (mustResolve) resolve();
+            }
+          });
         });
       }
 
       function updateLocalState(newState) {
-        window.state = newState;
-        console.log(state);
-        // render();
+        lastState = state;
+        state = newState;
+        console.log("new state: ", state);
+        render();
       }
 
       async function updateServerState(newState) {
-        stateDoc.set(newState);
+        await setDoc(stateDoc, newState);
       }
 
-      setTimeout(() => updateServerState({ test: false }), 3000);
+      // switch between sheas and schneiders
+      function selectFamily(familyName) {
+        lastState = state;
+        state.familyName = familyName;
+        state.givers =
+          familyName === "sheas" ? [...state.sheas] : [...state.schneiders];
+        state.recipients =
+          familyName === "sheas" ? [...state.sheas] : [...state.schneiders];
+        apply();
+      }
+
+      function apply() {
+        updateServerState(state);
+        render();
+      }
+
+      function recordSelection({ giver, recipient }) {
+        const { givers, recipients, selected } = state;
+        // record selection
+        selected.push({ giver, recipient });
+        // remove giver from remaining givers
+        givers.splice(
+          givers.findIndex((g) => g.name === giver.name),
+          1
+        );
+        // remove recipient from remaining recipients
+        recipients.splice(
+          recipients.findIndex((r) => r.name === recipient.name),
+          1
+        );
+        apply();
+      }
+
+      // returns a psuedo-random integer between 0 and the number that is passed. Pass a positive integer unless you want un-intended behavior.
+      function randomize(range) {
+        return Math.floor(Math.random() * range);
+      }
+
+      function matchFamily() {
+        const { givers, recipients } = state;
+        const giver = givers[randomize(givers.length)];
+        // console.log(giver);
+        const eligibleRecipients = recipients
+          .map((r) => {
+            // cannot gift to yourself
+            if (r.name === giver.name) return null;
+            // cannot gift to someone in the same family unit
+            // also, givers who are not in a family group should not be matched
+            // with recipients who are not in a family group, because those are the least
+            // restricted givers and recievers - save them to match with more restricted givers
+            if (giver.familyGroup === r.familyGroup) return null;
+            return r;
+          })
+          .filter((x) => x);
+        // console.log(eligibleRecipients);
+        const i = randomize(eligibleRecipients.length);
+        // console.log(i);
+        const recipient = eligibleRecipients[i];
+        // console.log(recipient);
+
+        // this logic has a weird edge case where, if all the eligible recipients for a giver have already been randomly claimed before that giver is evaluated, a giver may not have any eligible recipients. I don't have an elegant solution for this issue, so in this case throw a warning and start over.
+        if (!giver || !recipient)
+          console.error(
+            "An error occurred - giver or recipient is falsy. Please start over."
+          );
+        return { giver, recipient };
+      }
+
+      function getMatch() {
+        console.log("getting match");
+        console.log(state);
+        if (!state.givers.length) return null;
+        lastState = state;
+        const selection = matchFamily();
+        recordSelection(selection);
+      }
+
+      function render() {
+        // TODO: trigger animations on specific state changes?
+        // TODO: populate DOM elements showing the list of selections
+      }
+
+      async function setup() {
+        await getState();
+        if (!state) {
+          await updateServerState(defaultState);
+        }
+        document.getElementById("go").style.display = "block";
+        document.getElementById("go").addEventListener("click", getMatch);
+        // TODO: add event listener to call selectFamily()
+      }
+
+      // expose command to reset app state to the browser
+      window.resetState = function () {
+        updateServerState(defaultState);
+      };
+
+      setup();
 
       const sheas = [
         {
@@ -132,7 +242,6 @@
           name: "Jacqueline Shea",
         },
       ];
-
       const schneiders = [
         {
           name: "Rose Schneider",
@@ -224,85 +333,14 @@
         },
       ];
 
-      let givers, recipients;
-      const selected = [];
-
-      // switch between sheas and schneiders
-      function selectFamily(familyName) {
-        givers = familyName === "sheas" ? [...sheas] : [...schneiders];
-        recipients = familyName === "sheas" ? [...sheas] : [...schneiders];
-      }
-
-      function recordSelection({ giver, recipient }) {
-        // record selection
-        selected.push({ giver, recipient });
-        // remove giver from remaining givers
-        givers.splice(
-          givers.findIndex((g) => g.name === giver.name),
-          1
-        );
-        // remove recipient from remaining recipients
-        recipients.splice(
-          recipients.findIndex((r) => r.name === recipient.name),
-          1
-        );
-      }
-
-      // returns a psuedo-random integer between 0 and the number that is passed. Pass a positive integer unless you want un-intended behavior.
-      function randomize(range) {
-        return Math.floor(Math.random() * range);
-      }
-
-      function matchFamily() {
-        const giver = givers[randomize(givers.length)];
-        // console.log(giver);
-        const eligibleRecipients = recipients
-          .map((r) => {
-            // cannot gift to yourself
-            if (r.name === giver.name) return null;
-            // cannot gift to someone in the same family unit
-            // also, givers who are not in a family group should not be matched
-            // with recipients who are not in a family group, because those are the least
-            // restricted givers and recievers - save them to match with more restricted givers
-            if (giver.familyGroup === r.familyGroup) return null;
-            return r;
-          })
-          .filter((x) => x);
-        // console.log(eligibleRecipients);
-        const i = randomize(eligibleRecipients.length);
-        // console.log(i);
-        const recipient = eligibleRecipients[i];
-        // console.log(recipient);
-
-        // this logic has a weird edge case where, if all the eligible recipients for a giver have already been randomly claimed before that giver is evaluated, a giver may not have any eligible recipients. I don't have an elegant solution for this issue, so in this case throw a warning and start over.
-        if (!giver || !recipient)
-          console.error(
-            "An error occurred - giver or recipient is falsy. Please start over."
-          );
-        return { giver, recipient };
-      }
-
-      function getMatch() {
-        if (!givers.length) return null;
-        const selection = matchFamily();
-        // console.log(selection);
-        recordSelection(selection);
-        console.log(selected);
-        render();
-      }
-
-      function render() {
-        // TODO: populate DOM elements showing the list of selections
-      }
-
-      async function setup() {
-        // selectFamily("sheas");
-        await getState();
-        // TODO: add event listener to call getMatch()
-        // TODO: add event listener to call selectFamily()
-      }
-
-      setup();
+      const defaultState = {
+        selectedFamily: "sheas",
+        givers: [...sheas],
+        recipients: [...sheas],
+        selected: [],
+        schneiders,
+        sheas,
+      };
     </script>
   </body>
 </html>
