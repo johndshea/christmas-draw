@@ -7,27 +7,86 @@
     <title>Christmas Draw</title>
 
     <style>
-      div#go {
-        border-radius: 50%;
-        border: 4px solid black;
-        display: inline-block;
+      body {
         text-align: center;
-        margin: 0 auto;
-        height: 100px;
-        width: 100px;
-        background-image: url("https://www.nicepng.com/png/detail/51-519773_christmas-tree-comments-christmas-tree-svg-free.png");
-        background-size: contain;
-        background-repeat: no-repeat;
-        background-position: center;
-        background-color: rgb(246, 246, 246);
+      }
+      div#go {
         cursor: pointer;
         display: none;
+        width: 200px;
+        height: 200px;
+        background-image: url("img/closed.svg");
+        background-position: center;
       }
+      .blinking {
+        animation-duration: 1s;
+        animation-iteration-count: 2;
+        animation-name: bounce-2;
+        animation-timing-function: ease;
+      }
+      @keyframes bounce-2 {
+        0% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-100px);
+        }
+        100% {
+          transform: translateY(0);
+        }
+      }
+      /* div#going {
+        display: none;
+        width: 200px;
+        height: 200px;
+        transition: all 3s ease;
+      }
+      #going.expanded {
+        width: 200px;
+        height: 300px;
+      } */
+      #gone {
+        display: none;
+        width: 400px;
+        height: 300px;
+        background-image: url("img/open.svg");
+        background-position: center;
+        line-height: 300px;
+      }
+      /* #lid {
+        height: 138px;
+        width: 179px;
+        background-image: url("img/lid.svg");
+        background-position: center;
+      }
+      #box {
+        height: 163px;
+        width: 148px;
+        background-image: url("img/box.svg");
+        background-position: center;
+      } */
     </style>
   </head>
   <body>
+    <h1>Christmas List 2021</h1>
+    <div id="selected"></div>
+    <br />
+    <div id="going">
+      <div id="lid"></div>
+      <div id="box"></div>
+    </div>
+    <br />
+    <div id="gone"></div>
+    <br />
     <div id="go"></div>
+    <br />
+    <div id="upnext">Up next...</div>
+    <br />
+    <div id="givers"></div>
+
     <script type="module">
+      // TODO: there is still an edge case where you can end up with someone getting stuck because they draw an ineligible recipient (someone from their own family group) or themselves. See what you can do to fix this, once you get the visuals right.
+
       // Import the functions from the SDKs
       import { initializeApp } from "https://www.gstatic.com/firebasejs/9.1.2/firebase-app.js";
       import {
@@ -74,9 +133,9 @@
       }
 
       function updateLocalState(newState) {
-        lastState = state;
+        if (state) lastState = JSON.parse(JSON.stringify(state));
         state = newState;
-        console.log("new state: ", state);
+        console.log("new state from server: ", state);
         render();
       }
 
@@ -86,7 +145,7 @@
 
       // switch between sheas and schneiders
       function selectFamily(familyName) {
-        lastState = state;
+        lastState = JSON.parse(JSON.stringify(state));
         state.familyName = familyName;
         state.givers =
           familyName === "sheas" ? [...state.sheas] : [...state.schneiders];
@@ -124,7 +183,7 @@
 
       function matchFamily() {
         const { givers, recipients } = state;
-        const giver = givers[randomize(givers.length)];
+        const giver = givers[0 /* randomize(givers.length) */];
         // console.log(giver);
         const eligibleRecipients = recipients
           .map((r) => {
@@ -134,7 +193,11 @@
             // also, givers who are not in a family group should not be matched
             // with recipients who are not in a family group, because those are the least
             // restricted givers and recievers - save them to match with more restricted givers
-            if (giver.familyGroup === r.familyGroup) return null;
+            if (
+              giver.familyGroup === r.familyGroup ||
+              (!giver.familyGroup && !r.familyGroup)
+            )
+              return null;
             return r;
           })
           .filter((x) => x);
@@ -145,25 +208,80 @@
         // console.log(recipient);
 
         // this logic has a weird edge case where, if all the eligible recipients for a giver have already been randomly claimed before that giver is evaluated, a giver may not have any eligible recipients. I don't have an elegant solution for this issue, so in this case throw a warning and start over.
-        if (!giver || !recipient)
+        if (!giver || !recipient) {
           console.error(
             "An error occurred - giver or recipient is falsy. Please start over."
           );
+          console.log("state: ", { ...state });
+        }
+
         return { giver, recipient };
       }
 
       function getMatch() {
-        console.log("getting match");
-        console.log(state);
-        if (!state.givers.length) return null;
-        lastState = state;
+        if (!state.givers.length) {
+          console.log("all done!");
+          document.getElementById("upnext").innerHTML = "All Done!";
+          return null;
+        }
+        lastState = JSON.parse(JSON.stringify(state));
         const selection = matchFamily();
         recordSelection(selection);
       }
 
-      function render() {
-        // TODO: trigger animations on specific state changes?
-        // TODO: populate DOM elements showing the list of selections
+      async function render() {
+        if (
+          state &&
+          lastState &&
+          state.selected.length === lastState.selected.length + 1
+        ) {
+          await animateSelection(state.selected[state.selected.length - 1]);
+        }
+        const selectedDom = document.getElementById("selected");
+        const giversDom = document.getElementById("givers");
+        // clear out the selection list
+        selectedDom.textContent = "";
+        // clear out the givers list
+        giversDom.textContent = "";
+
+        // rebuild the selection list
+        state.selected.map((selection) => {
+          const selectionElement = document.createElement("div");
+          selectionElement.innerHTML = `
+            ${selection.giver.name} is giving to ${selection.recipient.name}
+          `;
+          selectedDom.appendChild(selectionElement);
+        });
+
+        // rebuild the givers list
+        state.givers.map((giver) => {
+          const giverElement = document.createElement("div");
+          giverElement.innerHTML = `${giver.name} `;
+          giversDom.appendChild(giverElement);
+        });
+      }
+
+      async function animateSelection(selection) {
+        const go = document.getElementById("go");
+        const going = document.getElementById("going");
+        const gone = document.getElementById("gone");
+        // go.style.display = "none";
+        // going.style.display = "inline-block";
+        // going.classList.add("expanded");
+        go.classList.add("blinking");
+        await timeout(2000);
+        go.classList.remove("blinking");
+        go.style.display = "none";
+        gone.innerHTML = selection.recipient.name;
+        gone.style.display = "inline-block";
+        await timeout(5000);
+        gone.style.display = "none";
+        go.style.display = "inline-block";
+        return;
+      }
+
+      function timeout(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
       }
 
       async function setup() {
@@ -171,14 +289,17 @@
         if (!state) {
           await updateServerState(defaultState);
         }
-        document.getElementById("go").style.display = "block";
+        document.getElementById("go").style.display = "inline-block";
         document.getElementById("go").addEventListener("click", getMatch);
         // TODO: add event listener to call selectFamily()
       }
 
       // expose command to reset app state to the browser
       window.resetState = function () {
+        lastState = JSON.parse(JSON.stringify(state));
+        state = defaultState;
         updateServerState(defaultState);
+        render();
       };
 
       setup();
@@ -234,12 +355,15 @@
         },
         {
           name: "Michael Shea",
+          familyGroup: "GA2",
         },
         {
           name: "Paul Shea",
+          familyGroup: "GA2",
         },
         {
           name: "Jacqueline Shea",
+          familyGroup: "GA2",
         },
       ];
       const schneiders = [
@@ -333,10 +457,14 @@
         },
       ];
 
+      // HERE change which family the tool is supporting
+      const selectedFamily = "schneiders";
+
       const defaultState = {
-        selectedFamily: "sheas",
-        givers: [...sheas],
-        recipients: [...sheas],
+        selectedFamily,
+        givers: selectedFamily === "schneiders" ? [...schneiders] : [...sheas],
+        recipients:
+          selectedFamily === "schneiders" ? [...schneiders] : [...sheas],
         selected: [],
         schneiders,
         sheas,
