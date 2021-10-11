@@ -9,6 +9,7 @@
     <style>
       body {
         text-align: center;
+        font-family: Arial, Helvetica, sans-serif;
       }
       div#go {
         cursor: pointer;
@@ -86,6 +87,9 @@
 
     <script type="module">
       // TODO: there is still an edge case where you can end up with someone getting stuck because they draw an ineligible recipient (someone from their own family group) or themselves. See what you can do to fix this, once you get the visuals right.
+
+      // TODO: sort the givers by largest family group first to solve the algo issue
+      // TODO: try looking ahead two matches to predict a collision
 
       // Import the functions from the SDKs
       import { initializeApp } from "https://www.gstatic.com/firebasejs/9.1.2/firebase-app.js";
@@ -368,48 +372,12 @@
       ];
       const schneiders = [
         {
-          name: "Rose Schneider",
-          familyGroup: "IA",
-        },
-        {
-          name: "Sandra Tully",
-          familyGroup: "CA",
-        },
-        {
           name: "Michael Schneider",
           familyGroup: "OH",
         },
         {
-          name: "Mary Shea",
-          familyGroup: "GA",
-        },
-        {
-          name: "Elizabeth Kawa",
-          familyGroup: "NE",
-        },
-        {
-          name: "Diana Schneider",
-          familyGroup: "IA",
-        },
-        {
-          name: "John Tully",
-          familyGroup: "CA",
-        },
-        {
           name: "Kori Schneider",
           familyGroup: "OH",
-        },
-        {
-          name: "John Shea",
-          familyGroup: "GA",
-        },
-        {
-          name: "Kevin Kawa",
-          familyGroup: "NE",
-        },
-        {
-          name: "Aiden Schneider-Holzer",
-          familyGroup: "IA",
         },
         {
           name: "Michaela Schneider",
@@ -432,12 +400,32 @@
           familyGroup: "OH",
         },
         {
+          name: "John Shea",
+          familyGroup: "GA",
+        },
+        {
+          name: "Mary Shea",
+          familyGroup: "GA",
+        },
+        {
           name: "James Shea",
           familyGroup: "GA",
         },
         {
-          name: "Finnian Schneider",
-          familyGroup: "IA",
+          name: "Robert Shea",
+          familyGroup: "GA",
+        },
+        {
+          name: "Gregory Shea",
+          familyGroup: "GA",
+        },
+        {
+          name: "John Tully",
+          familyGroup: "CA",
+        },
+        {
+          name: "Sandra Tully",
+          familyGroup: "CA",
         },
         {
           name: "Francis Tully",
@@ -448,12 +436,28 @@
           familyGroup: "CA",
         },
         {
-          name: "Robert Shea",
-          familyGroup: "GA",
+          name: "Rose Schneider",
+          familyGroup: "IA",
         },
         {
-          name: "Gregory Shea",
-          familyGroup: "GA",
+          name: "Diana Schneider",
+          familyGroup: "IA",
+        },
+        {
+          name: "Aden Schneider Holzer",
+          familyGroup: "IA",
+        },
+        {
+          name: "Fitzy Schneider",
+          familyGroup: "IA",
+        },
+        {
+          name: "Kevin Kawa",
+          familyGroup: "NE",
+        },
+        {
+          name: "Elizabeth Kawa",
+          familyGroup: "NE",
         },
       ];
 
