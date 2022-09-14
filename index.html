@@ -69,7 +69,7 @@
     </style>
   </head>
   <body>
-    <h1>Christmas List 2021</h1>
+    <h1>Christmas List 2022</h1>
     <div id="selected"></div>
     <br />
     <div id="going">
@@ -112,6 +112,7 @@
         storageBucket: "sketch-and-code-website.appspot.com",
         messagingSenderId: "867551653933",
         appId: "1:867551653933:web:d99668e756059779a848a4",
+        measurementId: "G-9K8B1E4N0K"
       };
 
       // Initialize Firebase
@@ -180,43 +181,50 @@
         apply();
       }
 
-      // returns a psuedo-random integer between 0 and the number that is passed. Pass a positive integer unless you want un-intended behavior.
+      // returns a psuedo-random integer between 0 and the number that is passed.
+      // Pass a positive integer unless you want un-intended behavior.
       function randomize(range) {
         return Math.floor(Math.random() * range);
+      }
+
+      function filterRecipients(recipients, giver, blockSameHousehold) {
+        const eligibleRecipients = recipients
+          .map((r) => {
+            // cannot gift to yourself
+            if (r.name === giver.name) return null;
+            // optional: cannot gift to someone in the same family unit
+            if (blockSameHousehold && giver.familyGroup === r.familyGroup) return null;
+            return r;
+          }).filter((x) => x);
+
+          return eligibleRecipients;
       }
 
       function matchFamily() {
         const { givers, recipients } = state;
         const giver = givers[0 /* randomize(givers.length) */];
         // console.log(giver);
-        const eligibleRecipients = recipients
-          .map((r) => {
-            // cannot gift to yourself
-            if (r.name === giver.name) return null;
-            // cannot gift to someone in the same family unit
-            // also, givers who are not in a family group should not be matched
-            // with recipients who are not in a family group, because those are the least
-            // restricted givers and recievers - save them to match with more restricted givers
-            if (
-              giver.familyGroup === r.familyGroup ||
-              (!giver.familyGroup && !r.familyGroup)
-            )
-              return null;
-            return r;
-          })
-          .filter((x) => x);
+        let eligibleRecipients = filterRecipients(recipients, giver, true);
+        if (!eligibleRecipients.length) {
+          eligibleRecipients = filterRecipients(recipients, giver, false);
+        }
         // console.log(eligibleRecipients);
         const i = randomize(eligibleRecipients.length);
         // console.log(i);
         const recipient = eligibleRecipients[i];
         // console.log(recipient);
 
-        // this logic has a weird edge case where, if all the eligible recipients for a giver have already been randomly claimed before that giver is evaluated, a giver may not have any eligible recipients. I don't have an elegant solution for this issue, so in this case throw a warning and start over.
-        if (!giver || !recipient) {
-          console.error(
-            "An error occurred - giver or recipient is falsy. Please start over."
-          );
-          console.log("state: ", { ...state });
+        // this logic has a weird edge case where, if all the eligible recipients 
+        // for a giver have already been randomly claimed before that giver is evaluated,
+        // a giver may not have any eligible recipients. I don't have an elegant solution
+        //  for this issue yet, so in this case throw a warning and start over.
+        if (!recipient) {
+          if (!giver || !recipient) {
+            console.error(
+              "An error occurred - giver or recipient is falsy. Please start over."
+            );
+            console.log("state: ", { ...state });
+          }
         }
 
         return { giver, recipient };
@@ -278,7 +286,7 @@
         go.style.display = "none";
         gone.innerHTML = selection.recipient.name;
         gone.style.display = "inline-block";
-        await timeout(5000);
+        await timeout(3000);
         gone.style.display = "none";
         go.style.display = "inline-block";
         return;
