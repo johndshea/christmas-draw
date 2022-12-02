@@ -214,7 +214,7 @@
         const recipient = eligibleRecipients[i];
         // console.log(recipient);
 
-        // this logic has a weird edge case where, if all the eligible recipients 
+        // this logic has a weird edge case where, if all the eligible recipients
         // for a giver have already been randomly claimed before that giver is evaluated,
         // a giver may not have any eligible recipients. I don't have an elegant solution
         //  for this issue yet, so in this case throw a warning and start over.
@@ -473,18 +473,99 @@
         },
       ];
 
+      const murrays = [
+        {
+          name: "Mike Schneider",
+          familyGroup: "3",
+        },
+        {
+          name: "Kori",
+          familyGroup: "3",
+        },
+        {
+          name: "Mika",
+          familyGroup: "3",
+        },
+        {
+          name: "Tiffany",
+          familyGroup: "3",
+        },
+        {
+          name: "Sophie",
+          familyGroup: "3",
+        },
+        {
+          name: "Brandon",
+          familyGroup: "3",
+        },
+        {
+          name: "Matt",
+          familyGroup: "3",
+        },
+        {
+          name: "Clare",
+          familyGroup: "3",
+        },
+        {
+          name: "Ryan",
+          familyGroup: "2",
+        },
+        {
+          name: "Megan",
+          familyGroup: "2",
+        },
+        {
+          name: "Ben",
+          familyGroup: "2",
+        },
+        {
+          name: "Addie",
+          familyGroup: "2",
+        },
+        {
+          name: "Ian",
+          familyGroup: "2",
+        },
+        {
+          name: "Michael",
+          familyGroup: "1",
+        },
+        {
+          name: "Sarah",
+          familyGroup: "1",
+        },
+        {
+          name: "Joslyn",
+          familyGroup: "1",
+        },
+        {
+          name: "Logan",
+          familyGroup: "1",
+        },
+      ]
+
       // HERE change which family the tool is supporting
-      const selectedFamily = "schneiders";
+      const selectedFamily = "murrays";
 
       const defaultState = {
         selectedFamily,
-        givers: selectedFamily === "schneiders" ? [...schneiders] : [...sheas],
-        recipients:
-          selectedFamily === "schneiders" ? [...schneiders] : [...sheas],
         selected: [],
         schneiders,
         sheas,
+        murrays
       };
+
+      if (selectedFamily === "schneiders") {
+        defaultState.givers = [...schneiders];
+        defaultState.recipients = [...schneiders];
+      } else if (selectedFamily === "murrays") {
+        defaultState.givers = [...murrays];
+        defaultState.recipients = [...murrays];
+      } else {
+        defaultState.givers = [...sheas];
+        defaultState.recipients = [...sheas];
+      }
+
     </script>
   </body>
 </html>
