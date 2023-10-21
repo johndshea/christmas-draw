@@ -206,6 +206,7 @@
         // console.log(giver);
         let eligibleRecipients = filterRecipients(recipients, giver, true);
         if (!eligibleRecipients.length) {
+          console.log("WARNING: no non-same-household recipients available. Giving a match within the same household")
           eligibleRecipients = filterRecipients(recipients, giver, false);
         }
         // console.log(eligibleRecipients);
@@ -335,6 +336,10 @@
         },
         {
           name: "Gregory Shea",
+          familyGroup: "GA",
+        },
+        {
+          name: "Lucy Shea",
           familyGroup: "GA",
         },
         {
