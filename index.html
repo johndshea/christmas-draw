@@ -152,10 +152,15 @@
       function selectFamily(familyName) {
         lastState = JSON.parse(JSON.stringify(state));
         state.familyName = familyName;
-        state.givers =
-          familyName === "sheas" ? [...state.sheas] : [...state.schneiders];
-        state.recipients =
-          familyName === "sheas" ? [...state.sheas] : [...state.schneiders];
+        if (familyName === "sheas") {
+          state.givers = [...state.sheas]
+        }
+        if (familyName === "schneiders") {
+          state.givers = [...state.schneiders]
+        }
+        if (familyName === "murrays") {
+          state.givers = [...state.murrays]
+        }
         apply();
       }
 
