@@ -1,42 +1,49 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Christmas Draw</title>
 
-    <style>
-      body {
-        text-align: center;
-        font-family: Arial, Helvetica, sans-serif;
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Christmas Draw</title>
+
+  <style>
+    body {
+      text-align: center;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    div#go {
+      cursor: pointer;
+      display: none;
+      width: 200px;
+      height: 200px;
+      background-image: url("img/closed.svg");
+      background-position: center;
+    }
+
+    .blinking {
+      animation-duration: 1s;
+      animation-iteration-count: 2;
+      animation-name: bounce-2;
+      animation-timing-function: ease;
+    }
+
+    @keyframes bounce-2 {
+      0% {
+        transform: translateY(0);
       }
-      div#go {
-        cursor: pointer;
-        display: none;
-        width: 200px;
-        height: 200px;
-        background-image: url("img/closed.svg");
-        background-position: center;
+
+      50% {
+        transform: translateY(-100px);
       }
-      .blinking {
-        animation-duration: 1s;
-        animation-iteration-count: 2;
-        animation-name: bounce-2;
-        animation-timing-function: ease;
+
+      100% {
+        transform: translateY(0);
       }
-      @keyframes bounce-2 {
-        0% {
-          transform: translateY(0);
-        }
-        50% {
-          transform: translateY(-100px);
-        }
-        100% {
-          transform: translateY(0);
-        }
-      }
-      /* div#going {
+    }
+
+    /* div#going {
         display: none;
         width: 200px;
         height: 200px;
@@ -46,15 +53,16 @@
         width: 200px;
         height: 300px;
       } */
-      #gone {
-        display: none;
-        width: 400px;
-        height: 300px;
-        background-image: url("img/open.svg");
-        background-position: center;
-        line-height: 300px;
-      }
-      /* #lid {
+    #gone {
+      display: none;
+      width: 400px;
+      height: 300px;
+      background-image: url("img/open.svg");
+      background-position: center;
+      line-height: 300px;
+    }
+
+    /* #lid {
         height: 138px;
         width: 179px;
         background-image: url("img/lid.svg");
@@ -66,30 +74,31 @@
         background-image: url("img/box.svg");
         background-position: center;
       } */
-    </style>
+  </style>
   </head>
-  <body>
-    <h1>Christmas List 2023</h1>
-    <div id="selected"></div>
-    <br />
-    <div id="going">
-      <div id="lid"></div>
-      <div id="box"></div>
-    </div>
-    <br />
-    <div id="gone"></div>
-    <br />
-    <div id="go"></div>
-    <br />
-    <div id="upnext">Up next...</div>
-    <br />
-    <div id="givers"></div>
 
-    <script type="module">
+<body>
+  <h1>Christmas List 2023</h1>
+  <div id="selected"></div>
+  <br />
+  <div id="going">
+    <div id="lid"></div>
+    <div id="box"></div>
+  </div>
+  <br />
+  <div id="gone"></div>
+  <br />
+  <div id="go"></div>
+  <br />
+  <div id="upnext">Up next...</div>
+  <br />
+  <div id="givers"></div>
+
+  <script type="module">
       // TODO: there is still an edge case where you can end up with someone getting stuck because they draw an ineligible recipient (someone from their own family group) or themselves. See what you can do to fix this, once you get the visuals right.
 
-      // TODO: sort the givers by largest family group first to solve the algo issue
-      // TODO: try looking ahead two matches to predict a collision
+    // TODO: sort the givers by largest family group first to solve the algo issue
+    // TODO: try looking ahead two matches to predict a collision
 
       // Import the functions from the SDKs
       import { initializeApp } from "https://www.gstatic.com/firebasejs/9.1.2/firebase-app.js";
@@ -148,20 +157,29 @@
         await setDoc(stateDoc, newState);
       }
 
-      // switch between sheas and schneiders
-      function selectFamily(familyName) {
-        lastState = JSON.parse(JSON.stringify(state));
-        state.familyName = familyName;
+    // switch between sheas and schneiders
+        window.selectFamily(familyName) {
+          if (
+            familyName === "sheas" || familyName === "schneiders" || familyName === "murrays") {
+            lastState = JSON.parse(JSON.stringify(state));
+            state.familyName = familyName;
+          state.selected = [];
         if (familyName === "sheas") {
           state.givers = [...state.sheas]
+          state.recipients = [...state.sheas]
         }
         if (familyName === "schneiders") {
           state.givers = [...state.schneiders]
+          state.recipients = [...state.schneiders]
         }
         if (familyName === "murrays") {
           state.givers = [...state.murrays]
+          state.recipients = [...state.murrays]
         }
         apply();
+        } else {
+          console.log("not a valid family name: ", familyName);
+        }
       }
 
       function apply() {
@@ -202,7 +220,7 @@
             return r;
           }).filter((x) => x);
 
-          return eligibleRecipients;
+        return eligibleRecipients;
       }
 
       function matchFamily() {
@@ -218,7 +236,7 @@
         const i = randomize(eligibleRecipients.length);
         // console.log(i);
         const recipient = eligibleRecipients[i];
-        // console.log(recipient);
+      // console.log(recipient);
 
         // this logic has a weird edge case where, if all the eligible recipients
         // for a giver have already been randomly claimed before that giver is evaluated,
@@ -309,7 +327,6 @@
         }
         document.getElementById("go").style.display = "inline-block";
         document.getElementById("go").addEventListener("click", getMatch);
-        // TODO: add event listener to call selectFamily()
       }
 
       // expose command to reset app state to the browser
@@ -592,6 +609,7 @@
         defaultState.recipients = [...sheas];
       }
 
-    </script>
+</script>
   </body>
+
 </html>
