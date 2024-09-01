@@ -381,17 +381,6 @@
         murrays
       };
 
-      if (selectedFamily === "schneiders") {
-        defaultState.givers = [...schneiders];
-        defaultState.recipients = [...schneiders];
-      } else if (selectedFamily === "murrays") {
-        defaultState.givers = [...murrays];
-        defaultState.recipients = [...murrays];
-      } else {
-        defaultState.givers = [...sheas];
-        defaultState.recipients = [...sheas];
-      }
-
       // expose command to reset app state to the browser
       window.resetState = function (familyName) {
         lastState = JSON.parse(JSON.stringify(state));
@@ -457,6 +446,17 @@
           state.givers = [...state.murrays]
         }
         apply();
+      }
+
+      if (selectedFamily === "schneiders") {
+        defaultState.givers = [...schneiders];
+        defaultState.recipients = [...schneiders];
+      } else if (selectedFamily === "murrays") {
+        defaultState.givers = [...murrays];
+        defaultState.recipients = [...murrays];
+      } else {
+        defaultState.givers = [...sheas];
+        defaultState.recipients = [...sheas];
       }
 
       function apply() {
