@@ -319,7 +319,6 @@
         if (isValidFamilyName(familyName)) selectFamily(familyName);
         updateServerState(state);
         render();
-        return state;
       };
 
       function isValidFamilyName (familyName) {
@@ -330,6 +329,7 @@
         ) {
           return true;
         } else {
+          console.log(familyName + " is not a valid famliy name")
           return false;
         }
       }
