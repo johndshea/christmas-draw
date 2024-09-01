@@ -123,7 +123,7 @@
       let state;
       let lastState;
 
-      window.getState() {
+      function getState() {
         return new Promise(async (resolve, reject) => {
           stateDoc = await doc(db, "christmas-draw", "state");
           const subscription = onSnapshot(stateDoc, (doc) => {
@@ -207,7 +207,7 @@
 
       function matchFamily() {
         const { givers, recipients } = state;
-        const giver = givers[0];
+        const giver = givers[0 /* randomize(givers.length) */];
         // console.log(giver);
         let eligibleRecipients = filterRecipients(recipients, giver, true);
         if (!eligibleRecipients.length) {
