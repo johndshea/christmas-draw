@@ -123,8 +123,218 @@
       let state;
       let lastState;
 
-      // HERE change which family the tool is supporting
-      const selectedFamily = "schneiders";
+      window.getState = function () {
+        return new Promise(async (resolve, reject) => {
+          stateDoc = await doc(db, "christmas-draw", "state");
+          const subscription = onSnapshot(stateDoc, (doc) => {
+            const source = doc.metadata.hasPendingWrites ? "Local" : "Server";
+            if (source === "Server" || !state) {
+              if (!state) var mustResolve = true;
+              updateLocalState(doc.data());
+              if (mustResolve) resolve();
+            }
+          });
+        });
+      }
+
+      function updateLocalState(newState) {
+        if (state) lastState = JSON.parse(JSON.stringify(state));
+        state = newState;
+        console.log("new state from server: ", state);
+        render();
+      }
+
+      async function updateServerState(newState) {
+        await setDoc(stateDoc, newState);
+      }
+
+      // switch between sheas and schneiders
+      function selectFamily(familyName) {
+        lastState = JSON.parse(JSON.stringify(state));
+        state.familyName = familyName;
+        if (familyName === "sheas") {
+          state.givers = [...state.sheas]
+        }
+        if (familyName === "schneiders") {
+          state.givers = [...state.schneiders]
+        }
+        if (familyName === "murrays") {
+          state.givers = [...state.murrays]
+        }
+        apply();
+      }
+
+      function apply() {
+        updateServerState(state);
+        render();
+      }
+
+      function recordSelection({ giver, recipient }) {
+        const { givers, recipients, selected } = state;
+        // record selection
+        selected.push({ giver, recipient });
+        // remove giver from remaining givers
+        givers.splice(
+          givers.findIndex((g) => g.name === giver.name),
+          1
+        );
+        // remove recipient from remaining recipients
+        recipients.splice(
+          recipients.findIndex((r) => r.name === recipient.name),
+          1
+        );
+        apply();
+      }
+
+      // returns a psuedo-random integer between 0 and the number that is passed.
+      // Pass a positive integer unless you want un-intended behavior.
+      function randomize(range) {
+        return Math.floor(Math.random() * range);
+      }
+
+      function filterRecipients(recipients, giver, blockSameHousehold) {
+        const eligibleRecipients = recipients
+          .map((r) => {
+            // cannot gift to yourself
+            if (r.name === giver.name) return null;
+            // optional: cannot gift to someone in the same family unit
+            if (blockSameHousehold && giver.familyGroup === r.familyGroup) return null;
+            return r;
+          }).filter((x) => x);
+
+          return eligibleRecipients;
+      }
+
+      function matchFamily() {
+        const { givers, recipients } = state;
+        const giver = givers[0];
+        // console.log(giver);
+        let eligibleRecipients = filterRecipients(recipients, giver, true);
+        if (!eligibleRecipients.length) {
+          console.log("WARNING: no non-same-household recipients available. Giving a match within the same household")
+          eligibleRecipients = filterRecipients(recipients, giver, false);
+        }
+        // console.log(eligibleRecipients);
+        const i = randomize(eligibleRecipients.length);
+        // console.log(i);
+        const recipient = eligibleRecipients[i];
+        // console.log(recipient);
+
+        // this logic has a weird edge case where, if all the eligible recipients
+        // for a giver have already been randomly claimed before that giver is evaluated,
+        // a giver may not have any eligible recipients. I don't have an elegant solution
+        //  for this issue yet, so in this case throw a warning and start over.
+        if (!recipient) {
+          if (!giver || !recipient) {
+            console.error(
+              "An error occurred - giver or recipient is falsy. Please start over."
+            );
+            console.log("state: ", { ...state });
+          }
+        }
+
+        return { giver, recipient };
+      }
+
+      function getMatch() {
+        if (!state.givers.length) {
+          console.log("all done!");
+          document.getElementById("upnext").innerHTML = "All Done!";
+          return null;
+        }
+        lastState = JSON.parse(JSON.stringify(state));
+        const selection = matchFamily();
+        recordSelection(selection);
+      }
+
+      async function render() {
+        if (
+          state &&
+          lastState &&
+          state.selected.length === lastState.selected.length + 1
+        ) {
+          await animateSelection(state.selected[state.selected.length - 1]);
+        }
+        const selectedDom = document.getElementById("selected");
+        const giversDom = document.getElementById("givers");
+        // clear out the selection list
+        selectedDom.textContent = "";
+        // clear out the givers list
+        giversDom.textContent = "";
+
+        // rebuild the selection list
+        state.selected.map((selection) => {
+          const selectionElement = document.createElement("div");
+          selectionElement.innerHTML = `
+            ${selection.giver.name} is giving to ${selection.recipient.name}
+          `;
+          selectedDom.appendChild(selectionElement);
+        });
+
+        // rebuild the givers list
+        state.givers.map((giver) => {
+          const giverElement = document.createElement("div");
+          giverElement.innerHTML = `${giver.name} `;
+          giversDom.appendChild(giverElement);
+        });
+      }
+
+      async function animateSelection(selection) {
+        const go = document.getElementById("go");
+        const going = document.getElementById("going");
+        const gone = document.getElementById("gone");
+        // go.style.display = "none";
+        // going.style.display = "inline-block";
+        // going.classList.add("expanded");
+        go.classList.add("blinking");
+        await timeout(2000);
+        go.classList.remove("blinking");
+        go.style.display = "none";
+        gone.innerHTML = selection.recipient.name;
+        gone.style.display = "inline-block";
+        await timeout(3000);
+        gone.style.display = "none";
+        go.style.display = "inline-block";
+        return;
+      }
+
+      function timeout(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+      }
+
+      async function setup() {
+        await getState();
+        if (!state) {
+          await updateServerState(defaultState);
+        }
+        document.getElementById("go").style.display = "inline-block";
+        document.getElementById("go").addEventListener("click", getMatch);
+        // TODO: add event listener to call selectFamily()
+      }
+
+      // expose command to reset app state to the browser
+      window.resetState = function (familyName) {
+        lastState = JSON.parse(JSON.stringify(state));
+        state = defaultState;
+        if (isValidFamilyName(familyName)) selectFamily(familyName);
+        updateServerState(state);
+        render();
+        return state;
+      };
+
+      function isValidFamilyName (familyName) {
+        if (
+          familyName &&
+          typeof familyName === "string" &&
+          ["sheas", "schneiders", "murrays"].indexOf(familyName) !== -1
+        ) {
+          return true;
+        } else {
+          return false;
+        }
+      }
+
+      setup();
 
       const sheas = [
         {
@@ -302,6 +512,7 @@
           familyGroup: "NE",
         },
       ];
+
       const murrays = [
         {
           name: "Mike Schneider",
@@ -371,7 +582,10 @@
           name: "Logan",
           familyGroup: "1",
         },
-      ];
+      ]
+
+      // HERE change which family the tool is supporting
+      const selectedFamily = "schneiders";
 
       const defaultState = {
         selectedFamily,
@@ -380,47 +594,6 @@
         sheas,
         murrays
       };
-
-      window.getState = function () {
-        return new Promise(async (resolve, reject) => {
-          stateDoc = await doc(db, "christmas-draw", "state");
-          const subscription = onSnapshot(stateDoc, (doc) => {
-            const source = doc.metadata.hasPendingWrites ? "Local" : "Server";
-            if (source === "Server" || !state) {
-              if (!state) var mustResolve = true;
-              updateLocalState(doc.data());
-              if (mustResolve) resolve();
-            }
-          });
-        });
-      }
-
-      function updateLocalState(newState) {
-        if (state) lastState = JSON.parse(JSON.stringify(state));
-        state = newState;
-        console.log("new state from server: ", state);
-        render();
-      }
-
-      async function updateServerState(newState) {
-        await setDoc(stateDoc, newState);
-      }
-
-      // switch between sheas and schneiders
-      function selectFamily(familyName) {
-        lastState = JSON.parse(JSON.stringify(state));
-        state.familyName = familyName;
-        if (familyName === "sheas") {
-          state.givers = [...state.sheas]
-        }
-        if (familyName === "schneiders") {
-          state.givers = [...state.schneiders]
-        }
-        if (familyName === "murrays") {
-          state.givers = [...state.murrays]
-        }
-        apply();
-      }
 
       if (selectedFamily === "schneiders") {
         defaultState.givers = [...schneiders];
@@ -433,177 +606,6 @@
         defaultState.recipients = [...sheas];
       }
 
-      function apply() {
-        updateServerState(state);
-        render();
-      }
-
-      function recordSelection({ giver, recipient }) {
-        const { givers, recipients, selected } = state;
-        // record selection
-        selected.push({ giver, recipient });
-        // remove giver from remaining givers
-        givers.splice(
-          givers.findIndex((g) => g.name === giver.name),
-          1
-        );
-        // remove recipient from remaining recipients
-        recipients.splice(
-          recipients.findIndex((r) => r.name === recipient.name),
-          1
-        );
-        apply();
-      }
-
-      // returns a psuedo-random integer between 0 and the number that is passed.
-      // Pass a positive integer unless you want un-intended behavior.
-      function randomize(range) {
-        return Math.floor(Math.random() * range);
-      }
-
-      function filterRecipients(recipients, giver, blockSameHousehold) {
-        const eligibleRecipients = recipients
-          .map((r) => {
-            // cannot gift to yourself
-            if (r.name === giver.name) return null;
-            // optional: cannot gift to someone in the same family unit
-            if (blockSameHousehold && giver.familyGroup === r.familyGroup) return null;
-            return r;
-          }).filter((x) => x);
-
-          return eligibleRecipients;
-      }
-
-      function matchFamily() {
-        const { givers, recipients } = state;
-        const giver = givers[0];
-        // console.log(giver);
-        let eligibleRecipients = filterRecipients(recipients, giver, true);
-        if (!eligibleRecipients.length) {
-          console.log("WARNING: no non-same-household recipients available. Giving a match within the same household")
-          eligibleRecipients = filterRecipients(recipients, giver, false);
-        }
-        // console.log(eligibleRecipients);
-        const i = randomize(eligibleRecipients.length);
-        // console.log(i);
-        const recipient = eligibleRecipients[i];
-        // console.log(recipient);
-
-        // this logic has a weird edge case where, if all the eligible recipients
-        // for a giver have already been randomly claimed before that giver is evaluated,
-        // a giver may not have any eligible recipients. I don't have an elegant solution
-        //  for this issue yet, so in this case throw a warning and start over.
-        if (!recipient) {
-          if (!giver || !recipient) {
-            console.error(
-              "An error occurred - giver or recipient is falsy. Please start over."
-            );
-            console.log("state: ", { ...state });
-          }
-        }
-
-        return { giver, recipient };
-      }
-
-      function getMatch() {
-        if (!state.givers.length) {
-          console.log("all done!");
-          document.getElementById("upnext").innerHTML = "All Done!";
-          return null;
-        }
-        lastState = JSON.parse(JSON.stringify(state));
-        const selection = matchFamily();
-        recordSelection(selection);
-      }
-
-      async function render() {
-        if (
-          state &&
-          lastState &&
-          state.selected.length === lastState.selected.length + 1
-        ) {
-          await animateSelection(state.selected[state.selected.length - 1]);
-        }
-        const selectedDom = document.getElementById("selected");
-        const giversDom = document.getElementById("givers");
-        // clear out the selection list
-        selectedDom.textContent = "";
-        // clear out the givers list
-        giversDom.textContent = "";
-
-        // rebuild the selection list
-        state.selected.map((selection) => {
-          const selectionElement = document.createElement("div");
-          selectionElement.innerHTML = `
-            ${selection.giver.name} is giving to ${selection.recipient.name}
-          `;
-          selectedDom.appendChild(selectionElement);
-        });
-
-        // rebuild the givers list
-        state.givers.map((giver) => {
-          const giverElement = document.createElement("div");
-          giverElement.innerHTML = `${giver.name} `;
-          giversDom.appendChild(giverElement);
-        });
-      }
-
-      async function animateSelection(selection) {
-        const go = document.getElementById("go");
-        const going = document.getElementById("going");
-        const gone = document.getElementById("gone");
-        // go.style.display = "none";
-        // going.style.display = "inline-block";
-        // going.classList.add("expanded");
-        go.classList.add("blinking");
-        await timeout(2000);
-        go.classList.remove("blinking");
-        go.style.display = "none";
-        gone.innerHTML = selection.recipient.name;
-        gone.style.display = "inline-block";
-        await timeout(3000);
-        gone.style.display = "none";
-        go.style.display = "inline-block";
-        return;
-      }
-
-      function timeout(ms) {
-        return new Promise((resolve) => setTimeout(resolve, ms));
-      }
-
-      async function setup() {
-        await getState();
-        if (!state) {
-          await updateServerState(defaultState);
-        }
-        document.getElementById("go").style.display = "inline-block";
-        document.getElementById("go").addEventListener("click", getMatch);
-        // TODO: add event listener to call selectFamily()
-      }
-
-      // expose command to reset app state to the browser
-      window.resetState = function (familyName) {
-        lastState = JSON.parse(JSON.stringify(state));
-        state = defaultState;
-        if (isValidFamilyName(familyName)) selectFamily(familyName);
-        updateServerState(state);
-        render();
-        return state;
-      };
-
-      function isValidFamilyName (familyName) {
-        if (
-          familyName &&
-          typeof familyName === "string" &&
-          ["sheas", "schneiders", "murrays"].indexOf(familyName) !== -1
-        ) {
-          return true;
-        } else {
-          return false;
-        }
-      }
-
-      setup();
     </script>
   </body>
 </html>
