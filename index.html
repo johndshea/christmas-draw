@@ -381,6 +381,32 @@
         murrays
       };
 
+      // expose command to reset app state to the browser
+      window.resetState = function (familyName) {
+        lastState = JSON.parse(JSON.stringify(state));
+        state = defaultState;
+        if (isValidFamilyName(familyName)) {
+          selectFamily(familyName)
+        } else {
+          selectFamily(selectedFamily)
+        };
+        updateServerState(state);
+        render();
+        return state;
+      };
+
+      async function setup() {
+        await getState();
+        if (!state) {
+          await updateServerState(defaultState);
+        }
+        document.getElementById("go").style.display = "inline-block";
+        document.getElementById("go").addEventListener("click", getMatch);
+        // TODO: add event listener to call selectFamily()
+      }
+
+      setup();
+
       window.getState = function () {
         return new Promise(async (resolve, reject) => {
           stateDoc = await doc(db, "christmas-draw", "state");
@@ -571,26 +597,6 @@
         return new Promise((resolve) => setTimeout(resolve, ms));
       }
 
-      async function setup() {
-        await getState();
-        if (!state) {
-          await updateServerState(defaultState);
-        }
-        document.getElementById("go").style.display = "inline-block";
-        document.getElementById("go").addEventListener("click", getMatch);
-        // TODO: add event listener to call selectFamily()
-      }
-
-      // expose command to reset app state to the browser
-      window.resetState = function (familyName) {
-        lastState = JSON.parse(JSON.stringify(state));
-        state = defaultState;
-        if (isValidFamilyName(familyName)) selectFamily(familyName);
-        updateServerState(state);
-        render();
-        return state;
-      };
-
       function isValidFamilyName (familyName) {
         if (
           familyName &&
@@ -602,8 +608,6 @@
           return false;
         }
       }
-
-      setup();
     </script>
   </body>
 </html>
