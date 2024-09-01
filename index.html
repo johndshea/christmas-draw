@@ -123,7 +123,7 @@
       let state;
       let lastState;
 
-      window.getState() {
+      window.getState = function () {
         return new Promise(async (resolve, reject) => {
           stateDoc = await doc(db, "christmas-draw", "state");
           const subscription = onSnapshot(stateDoc, (doc) => {
