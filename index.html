@@ -313,12 +313,26 @@
       }
 
       // expose command to reset app state to the browser
-      window.resetState = function () {
+      window.resetState = function (familyName) {
         lastState = JSON.parse(JSON.stringify(state));
         state = defaultState;
-        updateServerState(defaultState);
+        if (isValidFamilyName(familyName)) selectFamily(familyName);
+        updateServerState(state);
         render();
       };
+
+      function isValidFamilyName (familyName) {
+        if (
+          familyName &&
+          typeof familyName === "string" &&
+          ["sheas", "schneiders", "murrays"].indexOf(familyName) !== -1
+        ) {
+          return true;
+        } else {
+          console.log(familyName + " is not a valid famliy name")
+          return false;
+        }
+      }
 
       setup();
 
