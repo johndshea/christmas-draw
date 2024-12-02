@@ -158,7 +158,7 @@
       }
 
     // switch between sheas and schneiders
-        window.selectFamily(familyName) {
+        window.selectFamily = function (familyName) {
           if (
             familyName === "sheas" || familyName === "schneiders" || familyName === "murrays") {
             lastState = JSON.parse(JSON.stringify(state));
